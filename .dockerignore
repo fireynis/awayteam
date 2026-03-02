@@ -1,0 +1,11 @@
+.git
+.beads
+.claude
+node_modules
+web/.next
+web/out
+internal/frontend/dist
+*.db
+awayteam
+AGENTS.md
+docs

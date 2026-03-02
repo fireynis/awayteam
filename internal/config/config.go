@@ -2,6 +2,7 @@ package config
 
 import (
 	"errors"
+	"fmt"
 	"os"
 
 	"gopkg.in/yaml.v3"
@@ -33,20 +34,26 @@ func defaults() Config {
 
 func Load(path string) (Config, error) {
 	cfg := defaults()
-	if path == "" {
-		return cfg, nil
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return cfg, nil
+	if path != "" {
+		data, err := os.ReadFile(path)
+		if err != nil {
+			if !errors.Is(err, os.ErrNotExist) {
+				return cfg, err
+			}
+		} else if err := yaml.Unmarshal(data, &cfg); err != nil {
+			return cfg, err
 		}
-		return cfg, err
 	}
 
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return cfg, err
+	// Environment variables override config file
+	if v := os.Getenv("AWAYTEAM_PORT"); v != "" {
+		var port int
+		if _, err := fmt.Sscanf(v, "%d", &port); err == nil {
+			cfg.Server.Port = port
+		}
+	}
+	if v := os.Getenv("AWAYTEAM_DB_PATH"); v != "" {
+		cfg.Storage.SQLitePath = v
 	}
 
 	return cfg, nil
