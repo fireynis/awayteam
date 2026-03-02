@@ -1,17 +1,26 @@
 'use client';
 
-import { use } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 import { useAgentStore } from '@/store/agents';
 import { ConversationView } from '@/components/conversation-view';
 import { ResponseInput } from '@/components/response-input';
 import Link from 'next/link';
 
-export default function AgentPageClient({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const agentId = decodeURIComponent(id);
+function AgentPageContent() {
+  const searchParams = useSearchParams();
+  const agentId = searchParams.get('id') ?? '';
 
   const agent = useAgentStore((s) => s.agents.get(agentId));
   const events = useAgentStore((s) => s.agentEvents.get(agentId) ?? []);
+
+  if (!agentId) {
+    return (
+      <div className="text-gray-500 text-center py-12">
+        No agent ID specified. <Link href="/" className="text-blue-400 hover:underline">Go back</Link>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col h-[calc(100vh-73px)]">
@@ -38,5 +47,13 @@ export default function AgentPageClient({ params }: { params: Promise<{ id: stri
 
       <ResponseInput agentId={agentId} isWaiting={agent?.status === 'waiting'} />
     </div>
+  );
+}
+
+export default function AgentPage() {
+  return (
+    <Suspense fallback={<div className="text-gray-500 text-center py-12">Loading...</div>}>
+      <AgentPageContent />
+    </Suspense>
   );
 }

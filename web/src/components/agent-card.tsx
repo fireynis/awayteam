@@ -48,7 +48,7 @@ export function AgentCard({ agent }: AgentCardProps) {
   }, [agent.last_event]);
 
   return (
-    <a href={`/agents/${encodeURIComponent(agent.agent_id)}`}>
+    <a href={`/agent/?id=${encodeURIComponent(agent.agent_id)}`}>
       <div
         className={`rounded-lg bg-gray-800 border-l-4 ${statusBorderColor(agent.status)} p-4 hover:bg-gray-750 transition-colors cursor-pointer`}
       >
