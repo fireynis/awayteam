@@ -1,0 +1,52 @@
+import { create } from 'zustand';
+import type { AgentState, AgentStatus, DashboardEvent } from '@/lib/types';
+
+const MAX_EVENTS_PER_AGENT = 500;
+const MAX_RECENT_EVENTS = 100;
+
+interface AgentStore {
+  agents: Map<string, AgentState>;
+  agentEvents: Map<string, DashboardEvent[]>;
+  recentEvents: DashboardEvent[];
+  setAgents: (agents: AgentState[]) => void;
+  handleEvent: (event: DashboardEvent) => void;
+}
+
+export const useAgentStore = create<AgentStore>((set) => ({
+  agents: new Map(),
+  agentEvents: new Map(),
+  recentEvents: [],
+
+  setAgents: (agents: AgentState[]) => {
+    const map = new Map<string, AgentState>();
+    for (const a of agents) {
+      map.set(a.agent_id, a);
+    }
+    set({ agents: map });
+  },
+
+  handleEvent: (event: DashboardEvent) => {
+    set((state) => {
+      const agents = new Map(state.agents);
+      const agentEvents = new Map(state.agentEvents);
+
+      agents.set(event.agent_id, {
+        agent_id: event.agent_id,
+        agent_type: event.agent_type,
+        agent_name: event.agent_name,
+        status: event.status as AgentStatus,
+        last_event: event.timestamp,
+      });
+
+      if (event.type !== 'output.stream') {
+        const existing = agentEvents.get(event.agent_id) ?? [];
+        const updated = [...existing, event].slice(-MAX_EVENTS_PER_AGENT);
+        agentEvents.set(event.agent_id, updated);
+      }
+
+      const recentEvents = [event, ...state.recentEvents].slice(0, MAX_RECENT_EVENTS);
+
+      return { agents, agentEvents, recentEvents };
+    });
+  },
+}));

@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import { LayoutShell } from '@/components/layout-shell';
 
 export const metadata: Metadata = {
   title: 'AI Dashboard',
@@ -20,7 +21,7 @@ export default function RootLayout({
         />
       </head>
       <body className="font-[Geist] antialiased">
-        {children}
+        <LayoutShell>{children}</LayoutShell>
       </body>
     </html>
   );
