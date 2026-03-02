@@ -7,6 +7,7 @@ import (
 	"os"
 
 	"github.com/jeremy/ai-dashboard/internal/config"
+	"github.com/jeremy/ai-dashboard/internal/hook"
 )
 
 func main() {
@@ -19,6 +20,8 @@ func main() {
 	switch os.Args[1] {
 	case "serve":
 		cmdServe(os.Args[2:])
+	case "hook":
+		cmdHook(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", os.Args[1])
 		os.Exit(1)
@@ -37,4 +40,21 @@ func cmdServe(args []string) {
 
 	log.Printf("aid dashboard starting on :%d", cfg.Server.Port)
 	// Server will be wired in later tasks
+}
+
+func cmdHook(args []string) {
+	if len(args) == 0 {
+		fmt.Fprintf(os.Stderr, "Usage: aid hook <type>\n")
+		fmt.Fprintf(os.Stderr, "Types: post-tool-use, notification, user-prompt-submit\n")
+		os.Exit(1)
+	}
+
+	serverURL := os.Getenv("AID_SERVER_URL")
+	if serverURL == "" {
+		serverURL = "http://localhost:8080"
+	}
+
+	if err := hook.ProcessHook(args[0], serverURL); err != nil {
+		os.Exit(0)
+	}
 }
