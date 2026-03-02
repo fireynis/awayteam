@@ -46,6 +46,14 @@ export const useAgentStore = create<AgentStore>((set) => ({
 
       const recentEvents = [event, ...state.recentEvents].slice(0, MAX_RECENT_EVENTS);
 
+      // Browser notification for questions
+      if (event.type === 'question.asked' && typeof window !== 'undefined' && Notification.permission === 'granted') {
+        const data = event.data as Record<string, unknown> | undefined;
+        new Notification(`${event.agent_name || 'Agent'} needs input`, {
+          body: (data?.question as string) ?? 'Response needed',
+        });
+      }
+
       return { agents, agentEvents, recentEvents };
     });
   },
