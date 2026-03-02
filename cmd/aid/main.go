@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -22,6 +23,8 @@ func main() {
 		cmdServe(os.Args[2:])
 	case "hook":
 		cmdHook(os.Args[2:])
+	case "install":
+		cmdInstall(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command: %s\n", os.Args[1])
 		os.Exit(1)
@@ -57,4 +60,35 @@ func cmdHook(args []string) {
 	if err := hook.ProcessHook(args[0], serverURL); err != nil {
 		os.Exit(0)
 	}
+}
+
+func cmdInstall(args []string) {
+	if len(args) == 0 || args[0] != "claude-code" {
+		fmt.Fprintf(os.Stderr, "Usage: aid install claude-code\n")
+		os.Exit(1)
+	}
+
+	aidPath, err := os.Executable()
+	if err != nil {
+		log.Fatalf("could not determine aid binary path: %v", err)
+	}
+
+	hookConfig := map[string]any{
+		"hooks": map[string]any{
+			"PostToolUse": []map[string]string{
+				{"type": "command", "command": aidPath + " hook post-tool-use"},
+			},
+			"Notification": []map[string]string{
+				{"type": "command", "command": aidPath + " hook notification"},
+			},
+		},
+	}
+
+	data, _ := json.MarshalIndent(hookConfig, "", "  ")
+	fmt.Println("Add the following to your ~/.claude/settings.json or project .claude/settings.json:")
+	fmt.Println()
+	fmt.Println(string(data))
+	fmt.Println()
+	fmt.Printf("Or run: aid agent --name '<name>' claude\n")
+	fmt.Println("to start Claude Code with the PTY proxy (recommended).")
 }
