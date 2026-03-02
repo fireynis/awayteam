@@ -3,4 +3,4 @@ web/.next/
 web/out/
 internal/frontend/dist/
 *.db
-aid
+/aid
