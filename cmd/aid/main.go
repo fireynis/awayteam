@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jeremy/ai-dashboard/internal/agent"
 	"github.com/jeremy/ai-dashboard/internal/config"
 	"github.com/jeremy/ai-dashboard/internal/hook"
 	"github.com/jeremy/ai-dashboard/internal/server"
@@ -29,6 +30,8 @@ func main() {
 	switch os.Args[1] {
 	case "serve":
 		cmdServe(os.Args[2:])
+	case "agent":
+		cmdAgent(os.Args[2:])
 	case "hook":
 		cmdHook(os.Args[2:])
 	case "install":
@@ -81,6 +84,37 @@ func cmdServe(args []string) {
 	defer cancel()
 	if err := httpServer.Shutdown(shutdownCtx); err != nil {
 		log.Fatalf("forced shutdown: %v", err)
+	}
+}
+
+func cmdAgent(args []string) {
+	fs := flag.NewFlagSet("agent", flag.ExitOnError)
+	name := fs.String("name", "", "agent name (shown in dashboard)")
+	agentType := fs.String("type", "generic", "agent type")
+	serverURL := fs.String("server", "http://localhost:8080", "dashboard server URL")
+	fs.Parse(args)
+
+	remaining := fs.Args()
+	if len(remaining) == 0 {
+		fmt.Fprintf(os.Stderr, "Usage: aid agent [flags] <command> [args...]\n")
+		os.Exit(1)
+	}
+
+	if *name == "" {
+		*name = remaining[0]
+	}
+
+	cfg := agent.ProxyConfig{
+		Name:      *name,
+		AgentType: *agentType,
+		ServerURL: *serverURL,
+		Command:   remaining[0],
+		Args:      remaining[1:],
+	}
+
+	if err := agent.RunProxy(cfg); err != nil {
+		fmt.Fprintf(os.Stderr, "agent error: %v\n", err)
+		os.Exit(1)
 	}
 }
 
