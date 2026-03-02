@@ -17,7 +17,7 @@ func ProcessHook(hookType, serverURL string) error {
 		return err
 	}
 
-	agentID := os.Getenv("AID_AGENT_ID")
+	agentID := os.Getenv("AWAYTEAM_AGENT_ID")
 	if agentID == "" {
 		agentID = "hook-" + uuid.NewString()[:8]
 	}
@@ -44,7 +44,7 @@ func ProcessHook(hookType, serverURL string) error {
 		"timestamp":  time.Now().UTC().Format(time.RFC3339Nano),
 		"agent_id":   agentID,
 		"agent_type": "claude-code",
-		"agent_name": os.Getenv("AID_AGENT_NAME"),
+		"agent_name": os.Getenv("AWAYTEAM_AGENT_NAME"),
 		"status":     status,
 		"data":       json.RawMessage(payload),
 	}

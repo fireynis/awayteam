@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jeremy/ai-dashboard/internal/events"
+	"github.com/jeremy/awayteam/internal/events"
 )
 
 func testEvent(agentID, typ string, status events.Status) events.Event {

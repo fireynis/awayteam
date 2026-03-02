@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 
-	"github.com/jeremy/ai-dashboard/internal/events"
+	"github.com/jeremy/awayteam/internal/events"
 )
 
 type AgentState struct {

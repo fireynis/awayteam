@@ -26,7 +26,7 @@ A general-purpose dashboard for observing and interacting with remote/background
         │ POST /api/v1/events       │ response via WS
         │                           ▼
 ┌───────│───────────────────────────────────────┐
-│       │        aid agent claude [args]         │
+│       │        awayteam agent claude [args]         │
 │  ┌────┴─────┐          ┌─────────────────┐   │
 │  │  Hooks   │          │   PTY Proxy     │   │
 │  │(struct'd │          │ ┌─────────────┐ │   │
@@ -41,7 +41,7 @@ A general-purpose dashboard for observing and interacting with remote/background
 
 Three deliverables:
 
-1. **`aid` CLI** — single Go binary: `serve`, `agent`, `install`, `hook` subcommands
+1. **`awayteam` CLI** — single Go binary: `serve`, `agent`, `install`, `hook` subcommands
 2. **Dashboard Server** — event ingestion, WebSocket hub, response queue, SQLite storage
 3. **Dashboard UI** — Next.js Kanban board + full-screen conversation pages
 
@@ -104,17 +104,17 @@ Full-screen conversation view:
 - Tool calls as collapsible blocks with name, params, result
 - Questions highlighted with response options/buttons
 - Free-text response input at bottom
-- Typing a response → sent to agent via PTY proxy → dashboard WS → `aid agent` → PTY stdin
+- Typing a response → sent to agent via PTY proxy → dashboard WS → `awayteam agent` → PTY stdin
 - Back button returns to Kanban
 
 ### Sessions (`/sessions`)
 
 Historical list of completed agent sessions. Click to view conversation replay.
 
-## PTY Proxy (`aid agent`)
+## PTY Proxy (`awayteam agent`)
 
 ```
-$ aid agent --name "feature-x" claude --dangerously-skip-permissions
+$ awayteam agent --name "feature-x" claude --dangerously-skip-permissions
 ```
 
 1. Registers agent with dashboard server: `POST /api/v1/agents` → receives `agent_id`
@@ -128,14 +128,14 @@ $ aid agent --name "feature-x" claude --dangerously-skip-permissions
 
 Either terminal or dashboard can provide input — first one wins. If dashboard server unreachable, degrades gracefully (Claude works normally in terminal).
 
-For generic agents: `aid agent --name "backup" ./scripts/backup.sh` — same PTY proxy, no hooks.
+For generic agents: `awayteam agent --name "backup" ./scripts/backup.sh` — same PTY proxy, no hooks.
 
 ## Claude Code Integration
 
 ### Hook Installation
 
 ```bash
-$ aid install claude-code
+$ awayteam install claude-code
 ```
 
 Adds hooks to `~/.claude/settings.json`:
@@ -143,13 +143,13 @@ Adds hooks to `~/.claude/settings.json`:
 ```json
 {
   "hooks": {
-    "PostToolUse": [{"command": "aid hook post-tool-use"}],
-    "Notification": [{"command": "aid hook notification"}]
+    "PostToolUse": [{"command": "awayteam hook post-tool-use"}],
+    "Notification": [{"command": "awayteam hook notification"}]
   }
 }
 ```
 
-`aid hook <type>` reads hook payload from stdin, extracts structured data, POSTs to dashboard. Exits silently if server is down.
+`awayteam hook <type>` reads hook payload from stdin, extracts structured data, POSTs to dashboard. Exits silently if server is down.
 
 ### What hooks capture
 

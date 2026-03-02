@@ -1,4 +1,4 @@
-module github.com/jeremy/ai-dashboard
+module github.com/jeremy/awayteam
 
 go 1.25.0
 

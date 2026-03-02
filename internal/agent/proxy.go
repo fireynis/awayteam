@@ -36,9 +36,9 @@ func RunProxy(cfg ProxyConfig) error {
 
 	cmd := exec.Command(cfg.Command, cfg.Args...)
 	cmd.Env = append(os.Environ(),
-		"AID_AGENT_ID="+agentID,
-		"AID_AGENT_NAME="+cfg.Name,
-		"AID_SERVER_URL="+cfg.ServerURL,
+		"AWAYTEAM_AGENT_ID="+agentID,
+		"AWAYTEAM_AGENT_NAME="+cfg.Name,
+		"AWAYTEAM_SERVER_URL="+cfg.ServerURL,
 	)
 
 	ptmx, err := pty.Start(cmd)

@@ -23,7 +23,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
       <nav className="border-b border-gray-800 px-6 py-4">
         <div className="flex items-center gap-6">
           <Link href="/" className="text-xl font-bold">
-            AI Dashboard
+            Awayteam
           </Link>
         </div>
       </nav>

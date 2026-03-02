@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/jeremy/ai-dashboard/internal/events"
-	"github.com/jeremy/ai-dashboard/internal/store"
+	"github.com/jeremy/awayteam/internal/events"
+	"github.com/jeremy/awayteam/internal/store"
 )
 
 func writeJSON(w http.ResponseWriter, status int, data any) {

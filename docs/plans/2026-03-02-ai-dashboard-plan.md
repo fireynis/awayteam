@@ -4,7 +4,7 @@
 
 **Goal:** Build a general-purpose AI agent dashboard with Kanban swimlanes, full-screen conversation views, and bidirectional Claude Code integration via PTY proxy.
 
-**Architecture:** Go backend (`aid` CLI) serves an embedded Next.js frontend. Events flow in via HTTP POST (from hooks) and PTY output streaming. WebSocket hub broadcasts to the UI. Bidirectional agent-specific WebSocket channels allow responding to agent questions from the browser.
+**Architecture:** Go backend (`awayteam` CLI) serves an embedded Next.js frontend. Events flow in via HTTP POST (from hooks) and PTY output streaming. WebSocket hub broadcasts to the UI. Bidirectional agent-specific WebSocket channels allow responding to agent questions from the browser.
 
 **Tech Stack:** Go 1.25, creack/pty, gorilla/websocket, modernc.org/sqlite, Next.js 16, React 19, Zustand 5, Tailwind CSS 4
 
@@ -14,7 +14,7 @@
 
 ```
 ai-dashboard/
-├── cmd/aid/main.go                    # CLI entry point (serve, agent, install, hook)
+├── cmd/awayteam/main.go                    # CLI entry point (serve, agent, install, hook)
 ├── internal/
 │   ├── config/config.go               # YAML config with defaults
 │   ├── events/events.go               # Event model + validation
@@ -26,8 +26,8 @@ ai-dashboard/
 │   │   ├── server.go                  # HTTP server, routing, WS handlers
 │   │   ├── handlers.go                # REST endpoint handlers
 │   │   └── middleware.go              # CORS middleware
-│   ├── agent/proxy.go                 # PTY proxy (aid agent)
-│   ├── hook/hook.go                   # Hook payload processors (aid hook)
+│   ├── agent/proxy.go                 # PTY proxy (awayteam agent)
+│   ├── hook/hook.go                   # Hook payload processors (awayteam hook)
 │   └── frontend/embed.go             # Embedded frontend FS
 ├── web/
 │   ├── package.json
@@ -60,7 +60,7 @@ ai-dashboard/
 
 **Files:**
 - Create: `go.mod`
-- Create: `cmd/aid/main.go`
+- Create: `cmd/awayteam/main.go`
 - Create: `internal/config/config.go`
 - Create: `config.example.yaml`
 - Create: `Makefile`
@@ -69,7 +69,7 @@ ai-dashboard/
 
 ```bash
 cd /home/jeremy/projects/ai-dashboard
-go mod init github.com/jeremy/ai-dashboard
+go mod init github.com/jeremy/awayteam
 ```
 
 **Step 2: Create config package**
@@ -105,7 +105,7 @@ func defaults() Config {
 			Port: 8080,
 		},
 		Storage: StorageConfig{
-			SQLitePath: "./aid.db",
+			SQLitePath: "./awayteam.db",
 		},
 	}
 }
@@ -134,7 +134,7 @@ func Load(path string) (Config, error) {
 
 **Step 3: Create minimal CLI entry point**
 
-Create `cmd/aid/main.go`:
+Create `cmd/awayteam/main.go`:
 
 ```go
 package main
@@ -145,12 +145,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/jeremy/ai-dashboard/internal/config"
+	"github.com/jeremy/awayteam/internal/config"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: aid <command> [args]\n")
+		fmt.Fprintf(os.Stderr, "Usage: awayteam<command> [args]\n")
 		fmt.Fprintf(os.Stderr, "Commands: serve, agent, install, hook\n")
 		os.Exit(1)
 	}
@@ -174,7 +174,7 @@ func cmdServe(args []string) {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	log.Printf("aid dashboard starting on :%d", cfg.Server.Port)
+	log.Printf("awayteam dashboard starting on :%d", cfg.Server.Port)
 	// Server will be wired in Task 4
 }
 ```
@@ -188,7 +188,7 @@ server:
   port: 8080
 
 storage:
-  sqlite_path: ./aid.db
+  sqlite_path: ./awayteam.db
 ```
 
 Create `Makefile`:
@@ -197,13 +197,13 @@ Create `Makefile`:
 .PHONY: build run dev clean frontend
 
 build: frontend
-	go build -o aid ./cmd/aid
+	go build -o awayteam ./cmd/awayteam
 
 run: build
-	./aid serve
+	./awayteamserve
 
 dev:
-	go run ./cmd/aid serve
+	go run ./cmd/awayteam serve
 
 frontend:
 	cd web && npm run build
@@ -211,7 +211,7 @@ frontend:
 	cp -r web/out internal/frontend/dist
 
 clean:
-	rm -f aid
+	rm -f awayteam
 	rm -rf internal/frontend/dist
 	rm -rf web/out web/.next
 
@@ -223,7 +223,7 @@ test:
 
 ```bash
 go get gopkg.in/yaml.v3
-go build ./cmd/aid
+go build ./cmd/awayteam
 ```
 
 Expected: binary builds without errors.
@@ -424,7 +424,7 @@ package store
 import (
 	"context"
 
-	"github.com/jeremy/ai-dashboard/internal/events"
+	"github.com/jeremy/awayteam/internal/events"
 )
 
 type AgentState struct {
@@ -456,7 +456,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jeremy/ai-dashboard/internal/events"
+	"github.com/jeremy/awayteam/internal/events"
 )
 
 func testEvent(agentID, typ string, status events.Status) events.Event {
@@ -580,7 +580,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jeremy/ai-dashboard/internal/events"
+	"github.com/jeremy/awayteam/internal/events"
 	_ "modernc.org/sqlite"
 )
 
@@ -915,10 +915,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jeremy/ai-dashboard/internal/config"
-	"github.com/jeremy/ai-dashboard/internal/events"
-	"github.com/jeremy/ai-dashboard/internal/store"
-	"github.com/jeremy/ai-dashboard/internal/ws"
+	"github.com/jeremy/awayteam/internal/config"
+	"github.com/jeremy/awayteam/internal/events"
+	"github.com/jeremy/awayteam/internal/store"
+	"github.com/jeremy/awayteam/internal/ws"
 )
 
 func testServer(t *testing.T) (*Server, *store.SQLiteStore) {
@@ -1170,10 +1170,10 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/jeremy/ai-dashboard/internal/config"
-	"github.com/jeremy/ai-dashboard/internal/events"
-	"github.com/jeremy/ai-dashboard/internal/store"
-	"github.com/jeremy/ai-dashboard/internal/ws"
+	"github.com/jeremy/awayteam/internal/config"
+	"github.com/jeremy/awayteam/internal/events"
+	"github.com/jeremy/awayteam/internal/store"
+	"github.com/jeremy/awayteam/internal/ws"
 )
 
 type Server struct {
@@ -1358,7 +1358,7 @@ Expected: all PASS.
 
 **Step 7: Wire server into main.go**
 
-Update `cmd/aid/main.go` `cmdServe` function:
+Update `cmd/awayteam/main.go` `cmdServe` function:
 
 ```go
 func cmdServe(args []string) {
@@ -1390,7 +1390,7 @@ func cmdServe(args []string) {
 	defer stop()
 
 	go func() {
-		log.Printf("aid dashboard starting on %s", addr)
+		log.Printf("awayteam dashboard starting on %s", addr)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)
 		}
@@ -1411,7 +1411,7 @@ func cmdServe(args []string) {
 
 ```bash
 go test ./... -v
-go build ./cmd/aid
+go build ./cmd/awayteam
 ```
 
 Expected: all tests pass, binary builds.
@@ -1419,17 +1419,17 @@ Expected: all tests pass, binary builds.
 **Step 9: Commit**
 
 ```bash
-git add internal/server/ internal/ws/ cmd/aid/
+git add internal/server/ internal/ws/ cmd/awayteam/
 git commit -m "feat: HTTP server with event ingestion, REST API, and WebSocket hub"
 ```
 
 ---
 
-## Task 6: PTY Proxy (`aid agent`)
+## Task 6: PTY Proxy (`awayteam agent`)
 
 **Files:**
 - Create: `internal/agent/proxy.go`
-- Modify: `cmd/aid/main.go` (add `agent` subcommand)
+- Modify: `cmd/awayteam/main.go` (add `agent` subcommand)
 
 **Step 1: Implement PTY proxy**
 
@@ -1474,7 +1474,7 @@ func RunProxy(cfg ProxyConfig) error {
 
 	// Build the command
 	cmd := exec.Command(cfg.Command, cfg.Args...)
-	cmd.Env = append(os.Environ(), "AID_AGENT_ID="+agentID)
+	cmd.Env = append(os.Environ(), "AWAYTEAM_AGENT_ID="+agentID)
 
 	// Start with PTY
 	ptmx, err := pty.Start(cmd)
@@ -1636,7 +1636,7 @@ func cmdAgent(args []string) {
 
 	remaining := fs.Args()
 	if len(remaining) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: aid agent [flags] <command> [args...]\n")
+		fmt.Fprintf(os.Stderr, "Usage: awayteamagent [flags] <command> [args...]\n")
 		os.Exit(1)
 	}
 
@@ -1665,7 +1665,7 @@ func cmdAgent(args []string) {
 go get github.com/creack/pty
 go get github.com/google/uuid
 go get golang.org/x/term
-go build ./cmd/aid
+go build ./cmd/awayteam
 ```
 
 Expected: builds without errors.
@@ -1674,10 +1674,10 @@ Expected: builds without errors.
 
 ```bash
 # Terminal 1: start the dashboard
-./aid serve
+./awayteamserve
 
 # Terminal 2: run a simple command through the proxy
-./aid agent --name "test" bash -c "echo hello world && sleep 1"
+./awayteamagent --name "test" bash -c "echo hello world && sleep 1"
 ```
 
 Expected: "hello world" appears in terminal 2, events posted to dashboard.
@@ -1685,17 +1685,17 @@ Expected: "hello world" appears in terminal 2, events posted to dashboard.
 **Step 5: Commit**
 
 ```bash
-git add internal/agent/ cmd/aid/
+git add internal/agent/ cmd/awayteam/
 git commit -m "feat: PTY proxy for bidirectional agent communication"
 ```
 
 ---
 
-## Task 7: Hook Commands (`aid hook`)
+## Task 7: Hook Commands (`awayteam hook`)
 
 **Files:**
 - Create: `internal/hook/hook.go`
-- Modify: `cmd/aid/main.go` (add `hook` subcommand)
+- Modify: `cmd/awayteam/main.go` (add `hook` subcommand)
 
 **Step 1: Implement hook processor**
 
@@ -1723,9 +1723,9 @@ func ProcessHook(hookType, serverURL string) error {
 		return err
 	}
 
-	agentID := os.Getenv("AID_AGENT_ID")
+	agentID := os.Getenv("AWAYTEAM_AGENT_ID")
 	if agentID == "" {
-		// Not running under aid agent - generate a transient ID from CWD
+		// Not running under awayteam agent - generate a transient ID from CWD
 		agentID = "hook-" + uuid.NewString()[:8]
 	}
 
@@ -1751,7 +1751,7 @@ func ProcessHook(hookType, serverURL string) error {
 		"timestamp":  time.Now().UTC().Format(time.RFC3339Nano),
 		"agent_id":   agentID,
 		"agent_type": "claude-code",
-		"agent_name": os.Getenv("AID_AGENT_NAME"),
+		"agent_name": os.Getenv("AWAYTEAM_AGENT_NAME"),
 		"status":     status,
 		"data":       json.RawMessage(payload),
 	}
@@ -1780,12 +1780,12 @@ case "hook":
 ```go
 func cmdHook(args []string) {
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: aid hook <type>\n")
+		fmt.Fprintf(os.Stderr, "Usage: awayteamhook <type>\n")
 		fmt.Fprintf(os.Stderr, "Types: post-tool-use, notification, user-prompt-submit\n")
 		os.Exit(1)
 	}
 
-	serverURL := os.Getenv("AID_SERVER_URL")
+	serverURL := os.Getenv("AWAYTEAM_SERVER_URL")
 	if serverURL == "" {
 		serverURL = "http://localhost:8080"
 	}
@@ -1800,8 +1800,8 @@ func cmdHook(args []string) {
 **Step 3: Build and verify**
 
 ```bash
-go build ./cmd/aid
-echo '{"tool":"Read","result":"ok"}' | ./aid hook post-tool-use
+go build ./cmd/awayteam
+echo '{"tool":"Read","result":"ok"}' | ./awayteamhook post-tool-use
 ```
 
 Expected: no errors (event posted silently).
@@ -1809,16 +1809,16 @@ Expected: no errors (event posted silently).
 **Step 4: Commit**
 
 ```bash
-git add internal/hook/ cmd/aid/
+git add internal/hook/ cmd/awayteam/
 git commit -m "feat: hook command for Claude Code event ingestion"
 ```
 
 ---
 
-## Task 8: Install Command (`aid install`)
+## Task 8: Install Command (`awayteam install`)
 
 **Files:**
-- Modify: `cmd/aid/main.go` (add `install` subcommand)
+- Modify: `cmd/awayteam/main.go` (add `install` subcommand)
 
 **Step 1: Implement install command**
 
@@ -1832,14 +1832,14 @@ case "install":
 ```go
 func cmdInstall(args []string) {
 	if len(args) == 0 || args[0] != "claude-code" {
-		fmt.Fprintf(os.Stderr, "Usage: aid install claude-code\n")
+		fmt.Fprintf(os.Stderr, "Usage: awayteaminstall claude-code\n")
 		os.Exit(1)
 	}
 
-	// Find the aid binary path
+	// Find the awayteam binary path
 	aidPath, err := os.Executable()
 	if err != nil {
-		log.Fatalf("could not determine aid binary path: %v", err)
+		log.Fatalf("could not determine awayteam binary path: %v", err)
 	}
 
 	hookConfig := map[string]any{
@@ -1858,7 +1858,7 @@ func cmdInstall(args []string) {
 	fmt.Println()
 	fmt.Println(string(data))
 	fmt.Println()
-	fmt.Printf("Or run: aid agent --name '<name>' claude\n")
+	fmt.Printf("Or run: awayteam agent --name '<name>' claude\n")
 	fmt.Println("to start Claude Code with the PTY proxy (recommended).")
 }
 ```
@@ -1866,8 +1866,8 @@ func cmdInstall(args []string) {
 **Step 2: Build and test**
 
 ```bash
-go build ./cmd/aid
-./aid install claude-code
+go build ./cmd/awayteam
+./awayteaminstall claude-code
 ```
 
 Expected: prints hook configuration JSON.
@@ -1875,7 +1875,7 @@ Expected: prints hook configuration JSON.
 **Step 3: Commit**
 
 ```bash
-git add cmd/aid/
+git add cmd/awayteam/
 git commit -m "feat: install command for Claude Code hook setup"
 ```
 
@@ -1903,7 +1903,7 @@ Create `web/package.json`:
 
 ```json
 {
-  "name": "aid-dashboard",
+  "name": "awayteam-dashboard",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -2079,7 +2079,7 @@ echo "web/.next/" >> .gitignore
 echo "web/out/" >> .gitignore
 echo "internal/frontend/dist/" >> .gitignore
 echo "*.db" >> .gitignore
-echo "aid" >> .gitignore
+echo "awayteam" >> .gitignore
 git add .gitignore
 git commit -m "feat: Next.js frontend scaffolding with Tailwind dark theme"
 ```
@@ -2419,7 +2419,7 @@ export default function KanbanPage() {
 
       {allAgents.length === 0 && (
         <div className="text-gray-500 text-center py-12">
-          No agents connected. Start one with: <code className="font-mono text-gray-400">aid agent --name &quot;my-task&quot; claude</code>
+          No agents connected. Start one with: <code className="font-mono text-gray-400">awayteam agent --name &quot;my-task&quot; claude</code>
         </div>
       )}
 
@@ -2745,7 +2745,7 @@ git commit -m "feat: full-screen conversation page with response input"
 **Files:**
 - Create: `internal/frontend/embed.go`
 - Create: `internal/frontend/dist/.gitkeep`
-- Modify: `cmd/aid/main.go` (wire frontend FS)
+- Modify: `cmd/awayteam/main.go` (wire frontend FS)
 
 **Step 1: Create embed.go**
 
@@ -2769,7 +2769,7 @@ touch internal/frontend/dist/.gitkeep
 
 **Step 2: Wire frontend into server**
 
-Update `cmdServe` in `cmd/aid/main.go` to add frontend FS:
+Update `cmdServe` in `cmd/awayteam/main.go` to add frontend FS:
 
 ```go
 // After creating srv:
@@ -2781,7 +2781,7 @@ if err != nil {
 }
 ```
 
-Add import: `"io/fs"` and `"github.com/jeremy/ai-dashboard/internal/frontend"`
+Add import: `"io/fs"` and `"github.com/jeremy/awayteam/internal/frontend"`
 
 **Step 3: Build the full project**
 
@@ -2789,22 +2789,22 @@ Add import: `"io/fs"` and `"github.com/jeremy/ai-dashboard/internal/frontend"`
 cd web && npm install && npm run build && cd ..
 rm -rf internal/frontend/dist
 cp -r web/out internal/frontend/dist
-go build ./cmd/aid
+go build ./cmd/awayteam
 ```
 
-Expected: single `aid` binary with embedded frontend.
+Expected: single `awayteam` binary with embedded frontend.
 
 **Step 4: Manual end-to-end test**
 
 ```bash
 # Start the dashboard
-./aid serve &
+./awayteamserve &
 
 # In another terminal, open browser to http://localhost:8080
 # Should see the Kanban board (empty)
 
 # Run a test agent
-./aid agent --name "test-agent" bash -c 'echo "Starting..."; sleep 2; echo "Done!"'
+./awayteamagent --name "test-agent" bash -c 'echo "Starting..."; sleep 2; echo "Done!"'
 
 # Should see agent appear in Kanban → Active → Done
 ```
@@ -2812,7 +2812,7 @@ Expected: single `aid` binary with embedded frontend.
 **Step 5: Commit**
 
 ```bash
-git add internal/frontend/ cmd/aid/
+git add internal/frontend/ cmd/awayteam/
 git commit -m "feat: embed frontend in Go binary, complete end-to-end flow"
 ```
 
@@ -2876,14 +2876,14 @@ git commit -m "feat: browser notifications for waiting agents, final polish"
 
 | Task | Description | Key Files |
 |------|-------------|-----------|
-| 1 | Go module + config + Makefile | `go.mod`, `cmd/aid/main.go`, `internal/config/` |
+| 1 | Go module + config + Makefile | `go.mod`, `cmd/awayteam/main.go`, `internal/config/` |
 | 2 | Event model with validation | `internal/events/` |
 | 3 | SQLite store | `internal/store/` |
 | 4 | WebSocket hub | `internal/ws/` |
 | 5 | HTTP server + REST API | `internal/server/` |
 | 6 | PTY proxy | `internal/agent/` |
 | 7 | Hook commands | `internal/hook/` |
-| 8 | Install command | `cmd/aid/main.go` |
+| 8 | Install command | `cmd/awayteam/main.go` |
 | 9 | Frontend setup | `web/` scaffolding |
 | 10 | Zustand store + WS hook | `web/src/store/`, `web/src/hooks/` |
 | 11 | Kanban board | `web/src/app/page.tsx`, `web/src/components/agent-card.tsx` |

@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/jeremy/ai-dashboard/internal/events"
+	"github.com/jeremy/awayteam/internal/events"
 	_ "modernc.org/sqlite"
 )
 

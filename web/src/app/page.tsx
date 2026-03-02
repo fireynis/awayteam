@@ -25,7 +25,7 @@ export default function KanbanPage() {
 
       {allAgents.length === 0 && (
         <div className="text-gray-500 text-center py-12">
-          No agents connected. Start one with: <code className="font-mono text-gray-400">aid agent --name &quot;my-task&quot; claude</code>
+          No agents connected. Start one with: <code className="font-mono text-gray-400">awayteam agent --name &quot;my-task&quot; claude</code>
         </div>
       )}
 

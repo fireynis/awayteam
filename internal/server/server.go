@@ -6,9 +6,9 @@ import (
 
 	"github.com/gorilla/websocket"
 
-	"github.com/jeremy/ai-dashboard/internal/config"
-	"github.com/jeremy/ai-dashboard/internal/store"
-	"github.com/jeremy/ai-dashboard/internal/ws"
+	"github.com/jeremy/awayteam/internal/config"
+	"github.com/jeremy/awayteam/internal/store"
+	"github.com/jeremy/awayteam/internal/ws"
 )
 
 type Server struct {

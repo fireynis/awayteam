@@ -1,13 +1,13 @@
 .PHONY: build run dev clean frontend test
 
 build: frontend
-	go build -o aid ./cmd/aid
+	go build -o awayteam ./cmd/awayteam
 
 run: build
-	./aid serve
+	./awayteam serve
 
 dev:
-	go run ./cmd/aid serve
+	go run ./cmd/awayteam serve
 
 frontend:
 	cd web && npm run build
@@ -15,7 +15,7 @@ frontend:
 	cp -r web/out internal/frontend/dist
 
 clean:
-	rm -f aid
+	rm -f awayteam
 	rm -rf internal/frontend/dist
 	rm -rf web/out web/.next
 

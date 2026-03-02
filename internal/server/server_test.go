@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jeremy/ai-dashboard/internal/config"
-	"github.com/jeremy/ai-dashboard/internal/events"
-	"github.com/jeremy/ai-dashboard/internal/store"
-	"github.com/jeremy/ai-dashboard/internal/ws"
+	"github.com/jeremy/awayteam/internal/config"
+	"github.com/jeremy/awayteam/internal/events"
+	"github.com/jeremy/awayteam/internal/store"
+	"github.com/jeremy/awayteam/internal/ws"
 )
 
 func testServer(t *testing.T) (*Server, *store.SQLiteStore) {

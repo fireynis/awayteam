@@ -13,18 +13,18 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/jeremy/ai-dashboard/internal/agent"
-	"github.com/jeremy/ai-dashboard/internal/config"
-	"github.com/jeremy/ai-dashboard/internal/frontend"
-	"github.com/jeremy/ai-dashboard/internal/hook"
-	"github.com/jeremy/ai-dashboard/internal/server"
-	"github.com/jeremy/ai-dashboard/internal/store"
-	"github.com/jeremy/ai-dashboard/internal/ws"
+	"github.com/jeremy/awayteam/internal/agent"
+	"github.com/jeremy/awayteam/internal/config"
+	"github.com/jeremy/awayteam/internal/frontend"
+	"github.com/jeremy/awayteam/internal/hook"
+	"github.com/jeremy/awayteam/internal/server"
+	"github.com/jeremy/awayteam/internal/store"
+	"github.com/jeremy/awayteam/internal/ws"
 )
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "Usage: aid <command> [args]\n")
+		fmt.Fprintf(os.Stderr, "Usage: awayteam <command> [args]\n")
 		fmt.Fprintf(os.Stderr, "Commands: serve, agent, install, hook\n")
 		os.Exit(1)
 	}
@@ -81,7 +81,7 @@ func cmdServe(args []string) {
 	defer stop()
 
 	go func() {
-		log.Printf("aid dashboard starting on %s", addr)
+		log.Printf("awayteam dashboard starting on %s", addr)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatalf("server error: %v", err)
 		}
@@ -106,7 +106,7 @@ func cmdAgent(args []string) {
 
 	remaining := fs.Args()
 	if len(remaining) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: aid agent [flags] <command> [args...]\n")
+		fmt.Fprintf(os.Stderr, "Usage: awayteam agent [flags] <command> [args...]\n")
 		os.Exit(1)
 	}
 
@@ -130,12 +130,12 @@ func cmdAgent(args []string) {
 
 func cmdHook(args []string) {
 	if len(args) == 0 {
-		fmt.Fprintf(os.Stderr, "Usage: aid hook <type>\n")
+		fmt.Fprintf(os.Stderr, "Usage: awayteam hook <type>\n")
 		fmt.Fprintf(os.Stderr, "Types: post-tool-use, notification, user-prompt-submit\n")
 		os.Exit(1)
 	}
 
-	serverURL := os.Getenv("AID_SERVER_URL")
+	serverURL := os.Getenv("AWAYTEAM_SERVER_URL")
 	if serverURL == "" {
 		serverURL = "http://localhost:8080"
 	}
@@ -147,22 +147,22 @@ func cmdHook(args []string) {
 
 func cmdInstall(args []string) {
 	if len(args) == 0 || args[0] != "claude-code" {
-		fmt.Fprintf(os.Stderr, "Usage: aid install claude-code\n")
+		fmt.Fprintf(os.Stderr, "Usage: awayteam install claude-code\n")
 		os.Exit(1)
 	}
 
-	aidPath, err := os.Executable()
+	awayteamPath, err := os.Executable()
 	if err != nil {
-		log.Fatalf("could not determine aid binary path: %v", err)
+		log.Fatalf("could not determine awayteam binary path: %v", err)
 	}
 
 	hookConfig := map[string]any{
 		"hooks": map[string]any{
 			"PostToolUse": []map[string]string{
-				{"type": "command", "command": aidPath + " hook post-tool-use"},
+				{"type": "command", "command": awayteamPath + " hook post-tool-use"},
 			},
 			"Notification": []map[string]string{
-				{"type": "command", "command": aidPath + " hook notification"},
+				{"type": "command", "command": awayteamPath + " hook notification"},
 			},
 		},
 	}
@@ -172,6 +172,6 @@ func cmdInstall(args []string) {
 	fmt.Println()
 	fmt.Println(string(data))
 	fmt.Println()
-	fmt.Printf("Or run: aid agent --name '<name>' claude\n")
+	fmt.Printf("Or run: awayteam agent --name '<name>' claude\n")
 	fmt.Println("to start Claude Code with the PTY proxy (recommended).")
 }

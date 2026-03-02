@@ -3,7 +3,7 @@ import './globals.css';
 import { LayoutShell } from '@/components/layout-shell';
 
 export const metadata: Metadata = {
-  title: 'AI Dashboard',
+  title: 'Awayteam',
   description: 'Monitor and interact with AI agents',
 };
 

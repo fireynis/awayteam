@@ -26,7 +26,7 @@ func defaults() Config {
 			Port: 8080,
 		},
 		Storage: StorageConfig{
-			SQLitePath: "./aid.db",
+			SQLitePath: "./awayteam.db",
 		},
 	}
 }
