@@ -1,0 +1,5 @@
+server:
+  port: 8080
+
+storage:
+  sqlite_path: ./aid.db
