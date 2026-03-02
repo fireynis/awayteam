@@ -1,14 +1,22 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/jeremy/ai-dashboard/internal/config"
 	"github.com/jeremy/ai-dashboard/internal/hook"
+	"github.com/jeremy/ai-dashboard/internal/server"
+	"github.com/jeremy/ai-dashboard/internal/store"
+	"github.com/jeremy/ai-dashboard/internal/ws"
 )
 
 func main() {
@@ -41,8 +49,39 @@ func cmdServe(args []string) {
 		log.Fatalf("failed to load config: %v", err)
 	}
 
-	log.Printf("aid dashboard starting on :%d", cfg.Server.Port)
-	// Server will be wired in later tasks
+	st, err := store.NewSQLiteStore(cfg.Storage.SQLitePath)
+	if err != nil {
+		log.Fatalf("failed to create store: %v", err)
+	}
+	defer st.Close()
+
+	hub := ws.NewHub()
+	srv := server.New(cfg, st, hub)
+
+	addr := fmt.Sprintf(":%d", cfg.Server.Port)
+	httpServer := &http.Server{
+		Addr:    addr,
+		Handler: srv.Handler(),
+	}
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	go func() {
+		log.Printf("aid dashboard starting on %s", addr)
+		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			log.Fatalf("server error: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("shutting down...")
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := httpServer.Shutdown(shutdownCtx); err != nil {
+		log.Fatalf("forced shutdown: %v", err)
+	}
 }
 
 func cmdHook(args []string) {
