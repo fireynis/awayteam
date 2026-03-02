@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	ioFS "io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"time"
 
 	"github.com/jeremy/ai-dashboard/internal/config"
+	"github.com/jeremy/ai-dashboard/internal/frontend"
 	"github.com/jeremy/ai-dashboard/internal/hook"
 	"github.com/jeremy/ai-dashboard/internal/server"
 	"github.com/jeremy/ai-dashboard/internal/store"
@@ -57,6 +59,14 @@ func cmdServe(args []string) {
 
 	hub := ws.NewHub()
 	srv := server.New(cfg, st, hub)
+
+	// Add embedded frontend
+	frontendFS, err := ioFS.Sub(frontend.Dist, "dist")
+	if err != nil {
+		log.Printf("warning: no embedded frontend: %v", err)
+	} else {
+		srv.SetFrontendFS(frontendFS)
+	}
 
 	addr := fmt.Sprintf(":%d", cfg.Server.Port)
 	httpServer := &http.Server{
