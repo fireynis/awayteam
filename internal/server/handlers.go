@@ -80,3 +80,33 @@ func (s *Server) handleGetAgentEvents(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, evts)
 }
+
+func (s *Server) handleTerminalWS(w http.ResponseWriter, r *http.Request) {
+	agentID := r.PathValue("id")
+	if agentID == "" {
+		http.Error(w, "agent id required", http.StatusBadRequest)
+		return
+	}
+
+	sessionData, err := s.store.GetAgentSessionData(r.Context(), agentID)
+	if err != nil {
+		http.Error(w, "failed to look up agent", http.StatusInternalServerError)
+		return
+	}
+
+	var tmuxSession string
+	if sessionData != nil {
+		var info struct {
+			TmuxSession string `json:"tmux_session"`
+		}
+		if json.Unmarshal(sessionData, &info) == nil {
+			tmuxSession = info.TmuxSession
+		}
+	}
+
+	s.terminal.ServeWebSocket(w, r, tmuxSession)
+}
+
+func (s *Server) handleShellWS(w http.ResponseWriter, r *http.Request) {
+	s.terminal.ServeWebSocket(w, r, "")
+}

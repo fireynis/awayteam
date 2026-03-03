@@ -8,6 +8,7 @@ import (
 
 	"github.com/jeremy/awayteam/internal/config"
 	"github.com/jeremy/awayteam/internal/store"
+	"github.com/jeremy/awayteam/internal/terminal"
 	"github.com/jeremy/awayteam/internal/ws"
 )
 
@@ -17,13 +18,15 @@ type Server struct {
 	config     config.Config
 	upgrader   websocket.Upgrader
 	frontendFS fs.FS
+	terminal   *terminal.Handler
 }
 
 func New(cfg config.Config, st store.Store, h *ws.Hub) *Server {
 	return &Server{
-		store:  st,
-		hub:    h,
-		config: cfg,
+		store:    st,
+		hub:      h,
+		config:   cfg,
+		terminal: terminal.NewHandler(),
 		upgrader: websocket.Upgrader{
 			CheckOrigin: func(r *http.Request) bool { return true },
 		},
@@ -47,6 +50,8 @@ func (s *Server) Handler() http.Handler {
 	mux.HandleFunc("GET /api/v1/agents/{id}/events", s.handleGetAgentEvents)
 	mux.HandleFunc("GET /api/v1/ws", s.handleWS)
 	mux.HandleFunc("GET /api/v1/ws/agents/{id}", s.handleAgentWS)
+	mux.HandleFunc("GET /api/v1/ws/terminal/{id}", s.handleTerminalWS)
+	mux.HandleFunc("GET /api/v1/ws/terminal", s.handleShellWS)
 
 	if s.frontendFS != nil {
 		mux.Handle("/", http.FileServerFS(s.frontendFS))
