@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"os/user"
 	"strings"
 	"syscall"
 	"time"
@@ -34,12 +35,54 @@ type ProxyConfig struct {
 func RunProxy(cfg ProxyConfig) error {
 	agentID := uuid.NewString()
 
-	cmd := exec.Command(cfg.Command, cfg.Args...)
-	cmd.Env = append(os.Environ(),
+	childEnv := append(os.Environ(),
 		"AWAYTEAM_AGENT_ID="+agentID,
 		"AWAYTEAM_AGENT_NAME="+cfg.Name,
 		"AWAYTEAM_SERVER_URL="+cfg.ServerURL,
 	)
+
+	// Detect tmux and attempt to create a session
+	useTmux := false
+	sessionName := ""
+	if hasTmux() {
+		sessionName = tmuxSessionName(agentID)
+		_, err := startTmuxSession(sessionName, cfg.Command, cfg.Args, childEnv)
+		if err != nil {
+			log.Printf("warning: tmux session creation failed, falling back to direct PTY: %v", err)
+		} else {
+			useTmux = true
+		}
+	}
+
+	// Build connection info
+	connInfo := map[string]string{}
+	if hostname, err := os.Hostname(); err == nil {
+		connInfo["hostname"] = hostname
+	}
+	if u, err := user.Current(); err == nil {
+		connInfo["username"] = u.Username
+	}
+	if useTmux {
+		connInfo["tmux_session"] = sessionName
+		if hostname, ok := connInfo["hostname"]; ok {
+			if username, ok := connInfo["username"]; ok {
+				connInfo["ssh_command"] = fmt.Sprintf("ssh %s@%s", username, hostname)
+			}
+		}
+		connInfo["tmux_command"] = fmt.Sprintf("tmux attach-session -t %s", sessionName)
+	}
+
+	// Set up the command to run in the PTY
+	var cmd *exec.Cmd
+	if useTmux {
+		// Attach to the tmux session instead of running the child command directly
+		cmd = exec.Command("tmux", "attach-session", "-t", sessionName)
+		cmd.Env = childEnv
+		defer killTmuxSession(sessionName)
+	} else {
+		cmd = exec.Command(cfg.Command, cfg.Args...)
+		cmd.Env = childEnv
+	}
 
 	ptmx, err := pty.Start(cmd)
 	if err != nil {
@@ -65,8 +108,9 @@ func RunProxy(cfg ProxyConfig) error {
 	}
 	defer term.Restore(int(os.Stdin.Fd()), oldState)
 
-	// Post session.start event
-	postEvent(cfg.ServerURL, newEvent(agentID, cfg.Name, cfg.AgentType, "session.start", "active", nil))
+	// Post session.start event with connection info
+	connInfoData, _ := json.Marshal(connInfo)
+	postEvent(cfg.ServerURL, newEvent(agentID, cfg.Name, cfg.AgentType, "session.start", "active", connInfoData))
 
 	// Connect agent WS for receiving dashboard responses
 	var wsConn *websocket.Conn
@@ -174,4 +218,38 @@ func toWSURL(httpURL string) string {
 		u.Scheme = "ws"
 	}
 	return u.String()
+}
+
+// hasTmux checks if tmux is available on the system.
+func hasTmux() bool {
+	_, err := exec.LookPath("tmux")
+	return err == nil
+}
+
+// tmuxSessionName returns a short, deterministic tmux session name for an agent.
+func tmuxSessionName(agentID string) string {
+	short := agentID
+	if len(short) > 8 {
+		short = short[:8]
+	}
+	return "awayteam-" + short
+}
+
+// startTmuxSession creates a new tmux session running the given command.
+func startTmuxSession(name string, cmd string, args []string, env []string) (string, error) {
+	tmuxArgs := []string{"new-session", "-d", "-s", name, "-x", "200", "-y", "50", "--"}
+	tmuxArgs = append(tmuxArgs, cmd)
+	tmuxArgs = append(tmuxArgs, args...)
+
+	tmuxCmd := exec.Command("tmux", tmuxArgs...)
+	tmuxCmd.Env = env
+	if err := tmuxCmd.Run(); err != nil {
+		return "", fmt.Errorf("tmux new-session: %w", err)
+	}
+	return name, nil
+}
+
+// killTmuxSession kills a tmux session by name. Errors are ignored.
+func killTmuxSession(name string) {
+	exec.Command("tmux", "kill-session", "-t", name).Run()
 }
