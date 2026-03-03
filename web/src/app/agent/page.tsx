@@ -1,18 +1,22 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense } from 'react';
+import { Suspense, useState } from 'react';
 import { useAgentStore } from '@/store/agents';
 import { ConversationView } from '@/components/conversation-view';
 import { ResponseInput } from '@/components/response-input';
+import { TerminalView } from '@/components/terminal-view';
+import { ConnectionInfo } from '@/components/connection-info';
 import Link from 'next/link';
 
 function AgentPageContent() {
   const searchParams = useSearchParams();
   const agentId = searchParams.get('id') ?? '';
+  const [activeTab, setActiveTab] = useState<'terminal' | 'chat'>('terminal');
 
   const agent = useAgentStore((s) => s.agents.get(agentId));
   const events = useAgentStore((s) => s.agentEvents.get(agentId) ?? []);
+  const connectionInfo = useAgentStore((s) => s.agentConnectionInfo.get(agentId));
 
   if (!agentId) {
     return (
@@ -39,13 +43,57 @@ function AgentPageContent() {
             <span className="text-sm text-gray-500 capitalize">{agent.status}</span>
           </>
         )}
+
+        {/* Tab bar */}
+        <div className="ml-auto flex rounded-lg bg-gray-800 p-0.5">
+          <button
+            onClick={() => setActiveTab('terminal')}
+            className={`px-3 py-1 text-sm rounded-md transition-colors ${
+              activeTab === 'terminal'
+                ? 'bg-gray-700 text-white'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            Terminal
+          </button>
+          <button
+            onClick={() => setActiveTab('chat')}
+            className={`px-3 py-1 text-sm rounded-md transition-colors ${
+              activeTab === 'chat'
+                ? 'bg-gray-700 text-white'
+                : 'text-gray-400 hover:text-gray-200'
+            }`}
+          >
+            Chat
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-6 py-4">
-        <ConversationView events={events} />
-      </div>
+      {connectionInfo && (
+        <ConnectionInfo
+          hostname={connectionInfo.hostname}
+          username={connectionInfo.username}
+          tmuxSession={connectionInfo.tmux_session}
+          sshCommand={connectionInfo.ssh_command}
+          tmuxCommand={connectionInfo.tmux_command}
+        />
+      )}
 
-      <ResponseInput agentId={agentId} isWaiting={agent?.status === 'waiting'} />
+      {activeTab === 'terminal' ? (
+        <div className="flex-1 min-h-0">
+          <TerminalView
+            agentId={agentId}
+            tmuxSession={connectionInfo?.tmux_session}
+          />
+        </div>
+      ) : (
+        <>
+          <div className="flex-1 overflow-y-auto px-6 py-4">
+            <ConversationView events={events} />
+          </div>
+          <ResponseInput agentId={agentId} isWaiting={agent?.status === 'waiting'} />
+        </>
+      )}
     </div>
   );
 }

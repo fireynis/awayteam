@@ -7,6 +7,7 @@ const MAX_RECENT_EVENTS = 100;
 interface AgentStore {
   agents: Map<string, AgentState>;
   agentEvents: Map<string, DashboardEvent[]>;
+  agentConnectionInfo: Map<string, Record<string, string>>;
   recentEvents: DashboardEvent[];
   setAgents: (agents: AgentState[]) => void;
   handleEvent: (event: DashboardEvent) => void;
@@ -15,6 +16,7 @@ interface AgentStore {
 export const useAgentStore = create<AgentStore>((set) => ({
   agents: new Map(),
   agentEvents: new Map(),
+  agentConnectionInfo: new Map(),
   recentEvents: [],
 
   setAgents: (agents: AgentState[]) => {
@@ -29,6 +31,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
     set((state) => {
       const agents = new Map(state.agents);
       const agentEvents = new Map(state.agentEvents);
+      const agentConnectionInfo = new Map(state.agentConnectionInfo);
 
       agents.set(event.agent_id, {
         agent_id: event.agent_id,
@@ -37,6 +40,11 @@ export const useAgentStore = create<AgentStore>((set) => ({
         status: event.status as AgentStatus,
         last_event: event.timestamp,
       });
+
+      // Extract connection info from session.start events
+      if (event.type === 'session.start' && event.data) {
+        agentConnectionInfo.set(event.agent_id, event.data as Record<string, string>);
+      }
 
       if (event.type !== 'output.stream') {
         const existing = agentEvents.get(event.agent_id) ?? [];
@@ -54,7 +62,7 @@ export const useAgentStore = create<AgentStore>((set) => ({
         });
       }
 
-      return { agents, agentEvents, recentEvents };
+      return { agents, agentEvents, agentConnectionInfo, recentEvents };
     });
   },
 }));
