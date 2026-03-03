@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/jeremy/awayteam/internal/events"
 )
@@ -18,5 +19,6 @@ type Store interface {
 	SaveEvent(ctx context.Context, event events.Event) error
 	GetAgents(ctx context.Context) ([]AgentState, error)
 	GetAgentEvents(ctx context.Context, agentID string, limit int) ([]events.Event, error)
+	GetAgentSessionData(ctx context.Context, agentID string) (json.RawMessage, error)
 	Close() error
 }

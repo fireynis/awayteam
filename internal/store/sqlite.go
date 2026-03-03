@@ -142,6 +142,22 @@ func (s *SQLiteStore) GetAgentEvents(ctx context.Context, agentID string, limit 
 	return evts, rows.Err()
 }
 
+func (s *SQLiteStore) GetAgentSessionData(ctx context.Context, agentID string) (json.RawMessage, error) {
+	var dataJSON string
+	err := s.db.QueryRowContext(ctx,
+		`SELECT data_json FROM events
+		 WHERE agent_id = ? AND type = 'session.start'
+		 ORDER BY timestamp DESC LIMIT 1`,
+		agentID).Scan(&dataJSON)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return json.RawMessage(dataJSON), nil
+}
+
 func (s *SQLiteStore) Close() error {
 	return s.db.Close()
 }
