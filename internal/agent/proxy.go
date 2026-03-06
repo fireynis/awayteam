@@ -64,19 +64,21 @@ func RunProxy(cfg ProxyConfig) error {
 	}
 	if useTmux {
 		connInfo["tmux_session"] = sessionName
+		connInfo["tmux_socket"] = awayteamSocketPath()
 		if hostname, ok := connInfo["hostname"]; ok {
 			if username, ok := connInfo["username"]; ok {
 				connInfo["ssh_command"] = fmt.Sprintf("ssh %s@%s", username, hostname)
 			}
 		}
-		connInfo["tmux_command"] = fmt.Sprintf("tmux attach-session -t %s", sessionName)
+		connInfo["tmux_command"] = fmt.Sprintf("tmux -S %s attach-session -t %s", awayteamSocketPath(), sessionName)
 	}
 
 	// Set up the command to run in the PTY
 	var cmd *exec.Cmd
 	if useTmux {
 		// Attach to the tmux session instead of running the child command directly
-		cmd = exec.Command("tmux", "attach-session", "-t", sessionName)
+		socketPath := awayteamSocketPath()
+		cmd = exec.Command("tmux", "-S", socketPath, "attach-session", "-t", sessionName)
 		cmd.Env = childEnv
 		defer killTmuxSession(sessionName)
 	} else {
@@ -235,21 +237,37 @@ func tmuxSessionName(agentID string) string {
 	return "awayteam-" + short
 }
 
+// awayteamSocketPath returns a dedicated tmux socket path for awayteam sessions.
+func awayteamSocketPath() string {
+	dir := os.TempDir()
+	return fmt.Sprintf("%s/awayteam-tmux-%d", dir, os.Getuid())
+}
+
 // startTmuxSession creates a new tmux session running the given command.
 func startTmuxSession(name string, cmd string, args []string, env []string) (string, error) {
-	tmuxArgs := []string{"new-session", "-d", "-s", name, "-x", "200", "-y", "50", "--"}
+	socketPath := awayteamSocketPath()
+	tmuxArgs := []string{"-S", socketPath, "new-session", "-d", "-s", name, "-x", "200", "-y", "50", "--"}
 	tmuxArgs = append(tmuxArgs, cmd)
 	tmuxArgs = append(tmuxArgs, args...)
 
 	tmuxCmd := exec.Command("tmux", tmuxArgs...)
 	tmuxCmd.Env = env
+	var stderr bytes.Buffer
+	tmuxCmd.Stderr = &stderr
 	if err := tmuxCmd.Run(); err != nil {
+		detail := strings.TrimSpace(stderr.String())
+		if detail != "" {
+			return "", fmt.Errorf("tmux new-session: %w (%s)", err, detail)
+		}
 		return "", fmt.Errorf("tmux new-session: %w", err)
 	}
+	// Set env var so terminal handler can find the socket
+	os.Setenv("AWAYTEAM_TMUX_SOCKET", socketPath)
 	return name, nil
 }
 
 // killTmuxSession kills a tmux session by name. Errors are ignored.
 func killTmuxSession(name string) {
-	exec.Command("tmux", "kill-session", "-t", name).Run()
+	socketPath := awayteamSocketPath()
+	exec.Command("tmux", "-S", socketPath, "kill-session", "-t", name).Run()
 }

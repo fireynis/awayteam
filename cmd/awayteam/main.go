@@ -156,14 +156,22 @@ func cmdInstall(args []string) {
 		log.Fatalf("could not determine awayteam binary path: %v", err)
 	}
 
+	makeHook := func(cmd string) []map[string]any {
+		return []map[string]any{
+			{
+				"matcher": "",
+				"hooks": []map[string]string{
+					{"type": "command", "command": cmd},
+				},
+			},
+		}
+	}
+
 	hookConfig := map[string]any{
 		"hooks": map[string]any{
-			"PostToolUse": []map[string]string{
-				{"type": "command", "command": awayteamPath + " hook post-tool-use"},
-			},
-			"Notification": []map[string]string{
-				{"type": "command", "command": awayteamPath + " hook notification"},
-			},
+			"PostToolUse":      makeHook(awayteamPath + " hook post-tool-use"),
+			"Notification":     makeHook(awayteamPath + " hook notification"),
+			"UserPromptSubmit": makeHook(awayteamPath + " hook user-prompt-submit"),
 		},
 	}
 
