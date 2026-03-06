@@ -151,35 +151,126 @@ func cmdInstall(args []string) {
 		os.Exit(1)
 	}
 
+	fs := flag.NewFlagSet("install", flag.ExitOnError)
+	dryRun := fs.Bool("dry-run", false, "print what would be added without modifying settings")
+	fs.Parse(args[1:])
+
 	awayteamPath, err := os.Executable()
 	if err != nil {
 		log.Fatalf("could not determine awayteam binary path: %v", err)
 	}
 
-	makeHook := func(cmd string) []map[string]any {
-		return []map[string]any{
-			{
-				"matcher": "",
-				"hooks": []map[string]string{
-					{"type": "command", "command": cmd},
-				},
+	wantHooks := map[string]string{
+		"PostToolUse":      awayteamPath + " hook post-tool-use",
+		"Notification":     awayteamPath + " hook notification",
+		"UserPromptSubmit": awayteamPath + " hook user-prompt-submit",
+	}
+
+	settingsPath := settingsFilePath()
+
+	settings, err := readJSONFile(settingsPath)
+	if err != nil && !os.IsNotExist(err) {
+		log.Fatalf("failed to read %s: %v", settingsPath, err)
+	}
+	if settings == nil {
+		settings = map[string]any{}
+	}
+
+	hooks, _ := settings["hooks"].(map[string]any)
+	if hooks == nil {
+		hooks = map[string]any{}
+	}
+
+	added := 0
+	for hookName, command := range wantHooks {
+		if hookListContainsCommand(hooks[hookName], command) {
+			continue
+		}
+		existing, _ := hooks[hookName].([]any)
+		entry := map[string]any{
+			"matcher": "",
+			"hooks": []map[string]string{
+				{"type": "command", "command": command},
 			},
 		}
+		hooks[hookName] = append(existing, entry)
+		added++
 	}
 
-	hookConfig := map[string]any{
-		"hooks": map[string]any{
-			"PostToolUse":      makeHook(awayteamPath + " hook post-tool-use"),
-			"Notification":     makeHook(awayteamPath + " hook notification"),
-			"UserPromptSubmit": makeHook(awayteamPath + " hook user-prompt-submit"),
-		},
+	if added == 0 {
+		fmt.Println("awayteam hooks already installed in", settingsPath)
+		return
 	}
 
-	data, _ := json.MarshalIndent(hookConfig, "", "  ")
-	fmt.Println("Add the following to your ~/.claude/settings.json or project .claude/settings.json:")
-	fmt.Println()
-	fmt.Println(string(data))
-	fmt.Println()
-	fmt.Printf("Or run: awayteam agent --name '<name>' claude\n")
-	fmt.Println("to start Claude Code with the PTY proxy (recommended).")
+	settings["hooks"] = hooks
+
+	if *dryRun {
+		data, _ := json.MarshalIndent(settings, "", "  ")
+		fmt.Println("Would write to", settingsPath+":")
+		fmt.Println(string(data))
+		return
+	}
+
+	if err := writeJSONFile(settingsPath, settings); err != nil {
+		log.Fatalf("failed to write %s: %v", settingsPath, err)
+	}
+
+	fmt.Printf("Added %d hook(s) to %s\n", added, settingsPath)
+}
+
+func settingsFilePath() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatalf("could not determine home directory: %v", err)
+	}
+	return home + "/.claude/settings.json"
+}
+
+func readJSONFile(path string) (map[string]any, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	var result map[string]any
+	if err := json.Unmarshal(data, &result); err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+	return result, nil
+}
+
+func writeJSONFile(path string, data map[string]any) error {
+	out, err := json.MarshalIndent(data, "", "  ")
+	if err != nil {
+		return err
+	}
+	out = append(out, '\n')
+	return os.WriteFile(path, out, 0644)
+}
+
+// hookListContainsCommand checks if a hook list already contains a specific command.
+func hookListContainsCommand(hookList any, command string) bool {
+	list, ok := hookList.([]any)
+	if !ok {
+		return false
+	}
+	for _, entry := range list {
+		entryMap, ok := entry.(map[string]any)
+		if !ok {
+			continue
+		}
+		innerHooks, ok := entryMap["hooks"].([]any)
+		if !ok {
+			continue
+		}
+		for _, h := range innerHooks {
+			hMap, ok := h.(map[string]any)
+			if !ok {
+				continue
+			}
+			if cmd, _ := hMap["command"].(string); cmd == command {
+				return true
+			}
+		}
+	}
+	return false
 }
