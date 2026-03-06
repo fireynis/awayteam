@@ -56,7 +56,7 @@ func (h *Handler) ServeWebSocket(w http.ResponseWriter, r *http.Request, tmuxSes
 			}
 		}
 
-		args := []string{"attach-session", "-t", tmuxSession}
+		args := []string{"-u", "attach-session", "-t", tmuxSession}
 		if socketPath != "" {
 			args = append([]string{"-S", socketPath}, args...)
 		}

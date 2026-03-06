@@ -78,7 +78,7 @@ func RunProxy(cfg ProxyConfig) error {
 	if useTmux {
 		// Attach to the tmux session instead of running the child command directly
 		socketPath := awayteamSocketPath()
-		cmd = exec.Command("tmux", "-S", socketPath, "attach-session", "-t", sessionName)
+		cmd = exec.Command("tmux", "-u", "-S", socketPath, "attach-session", "-t", sessionName)
 		cmd.Env = childEnv
 		defer killTmuxSession(sessionName)
 	} else {
@@ -246,7 +246,7 @@ func awayteamSocketPath() string {
 // startTmuxSession creates a new tmux session running the given command.
 func startTmuxSession(name string, cmd string, args []string, env []string) (string, error) {
 	socketPath := awayteamSocketPath()
-	tmuxArgs := []string{"-S", socketPath, "new-session", "-d", "-s", name, "-x", "200", "-y", "50", "--"}
+	tmuxArgs := []string{"-u", "-S", socketPath, "new-session", "-d", "-s", name, "-x", "200", "-y", "50", "--"}
 	tmuxArgs = append(tmuxArgs, cmd)
 	tmuxArgs = append(tmuxArgs, args...)
 

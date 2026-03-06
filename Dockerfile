@@ -19,7 +19,7 @@ RUN go build -o awayteam ./cmd/awayteam
 FROM alpine:3.21
 LABEL org.opencontainers.image.source=https://github.com/fireynis/awayteam
 RUN apk add --no-cache ca-certificates tmux ncurses-terminfo-base
-ENV TERM=xterm-256color
+ENV TERM=xterm-256color LANG=C.UTF-8
 COPY --from=backend /build/awayteam /usr/local/bin/awayteam
 VOLUME /data
 ENV AWAYTEAM_DB_PATH=/data/awayteam.db
