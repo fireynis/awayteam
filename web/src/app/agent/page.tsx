@@ -2,7 +2,7 @@
 
 import { useSearchParams } from 'next/navigation';
 import { Suspense, useState } from 'react';
-import { useAgentStore } from '@/store/agents';
+import { useAgentStore, EMPTY_EVENTS } from '@/store/agents';
 import { ConversationView } from '@/components/conversation-view';
 import { ResponseInput } from '@/components/response-input';
 import { TerminalView } from '@/components/terminal-view';
@@ -15,7 +15,7 @@ function AgentPageContent() {
   const [activeTab, setActiveTab] = useState<'terminal' | 'chat'>('terminal');
 
   const agent = useAgentStore((s) => s.agents.get(agentId));
-  const events = useAgentStore((s) => s.agentEvents.get(agentId) ?? []);
+  const events = useAgentStore((s) => s.agentEvents.get(agentId)) ?? EMPTY_EVENTS;
   const connectionInfo = useAgentStore((s) => s.agentConnectionInfo.get(agentId));
 
   if (!agentId) {

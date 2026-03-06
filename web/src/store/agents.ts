@@ -3,6 +3,7 @@ import type { AgentState, AgentStatus, DashboardEvent } from '@/lib/types';
 
 const MAX_EVENTS_PER_AGENT = 500;
 const MAX_RECENT_EVENTS = 100;
+export const EMPTY_EVENTS: DashboardEvent[] = [];
 
 interface AgentStore {
   agents: Map<string, AgentState>;

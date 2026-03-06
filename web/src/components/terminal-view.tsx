@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Terminal } from '@xterm/xterm';
-import { FitAddon } from '@xterm/addon-fit';
-import { WebLinksAddon } from '@xterm/addon-web-links';
+import type { Terminal } from '@xterm/xterm';
+import type { FitAddon } from '@xterm/addon-fit';
 import '@xterm/xterm/css/xterm.css';
 
 interface TerminalViewProps {
@@ -21,77 +20,95 @@ export function TerminalView({ agentId, tmuxSession }: TerminalViewProps) {
   useEffect(() => {
     if (!termRef.current) return;
 
-    const terminal = new Terminal({
-      cursorBlink: true,
-      fontSize: 14,
-      fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
-      theme: {
-        background: '#0d1117',
-        foreground: '#c9d1d9',
-        cursor: '#58a6ff',
-        selectionBackground: '#264f78',
-      },
-      allowProposedApi: true,
-    });
+    let cancelled = false;
+    let terminal: Terminal;
+    let ws: WebSocket;
+    let resizeObserver: ResizeObserver;
 
-    const fitAddon = new FitAddon();
-    const webLinksAddon = new WebLinksAddon();
-    terminal.loadAddon(fitAddon);
-    terminal.loadAddon(webLinksAddon);
-    terminal.open(termRef.current);
-    fitAddon.fit();
+    async function init() {
+      const [
+        { Terminal },
+        { FitAddon },
+        { WebLinksAddon },
+      ] = await Promise.all([
+        import('@xterm/xterm'),
+        import('@xterm/addon-fit'),
+        import('@xterm/addon-web-links'),
+      ]);
+      if (cancelled || !termRef.current) return;
 
-    terminalRef.current = terminal;
-    fitAddonRef.current = fitAddon;
+      terminal = new Terminal({
+        cursorBlink: true,
+        fontSize: 14,
+        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+        theme: {
+          background: '#0d1117',
+          foreground: '#c9d1d9',
+          cursor: '#58a6ff',
+          selectionBackground: '#264f78',
+        },
+        allowProposedApi: true,
+      });
 
-    // WebSocket connection
-    const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${wsProtocol}//${window.location.host}/api/v1/ws/terminal/${agentId}`;
-
-    const ws = new WebSocket(wsUrl);
-    ws.binaryType = 'arraybuffer';
-    wsRef.current = ws;
-
-    ws.onopen = () => {
-      setStatus('connected');
-      // Send initial size
-      const dims = fitAddon.proposeDimensions();
-      if (dims) {
-        ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
-      }
-    };
-
-    ws.onmessage = (event) => {
-      if (event.data instanceof ArrayBuffer) {
-        terminal.write(new Uint8Array(event.data));
-      }
-    };
-
-    ws.onclose = () => setStatus('disconnected');
-    ws.onerror = () => ws.close();
-
-    // Terminal input -> WebSocket
-    terminal.onData((data) => {
-      if (ws.readyState === WebSocket.OPEN) {
-        const encoder = new TextEncoder();
-        ws.send(encoder.encode(data));
-      }
-    });
-
-    // Handle resize
-    const resizeObserver = new ResizeObserver(() => {
+      const fitAddon = new FitAddon();
+      const webLinksAddon = new WebLinksAddon();
+      terminal.loadAddon(fitAddon);
+      terminal.loadAddon(webLinksAddon);
+      terminal.open(termRef.current);
       fitAddon.fit();
-      const dims = fitAddon.proposeDimensions();
-      if (dims && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
-      }
-    });
-    resizeObserver.observe(termRef.current);
+
+      terminalRef.current = terminal;
+      fitAddonRef.current = fitAddon;
+
+      // WebSocket connection
+      const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${wsProtocol}//${window.location.host}/api/v1/ws/terminal/${agentId}`;
+
+      ws = new WebSocket(wsUrl);
+      ws.binaryType = 'arraybuffer';
+      wsRef.current = ws;
+
+      ws.onopen = () => {
+        setStatus('connected');
+        const dims = fitAddon.proposeDimensions();
+        if (dims) {
+          ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
+        }
+      };
+
+      ws.onmessage = (event) => {
+        if (event.data instanceof ArrayBuffer) {
+          terminal.write(new Uint8Array(event.data));
+        }
+      };
+
+      ws.onclose = () => setStatus('disconnected');
+      ws.onerror = () => ws.close();
+
+      terminal.onData((data) => {
+        if (ws.readyState === WebSocket.OPEN) {
+          const encoder = new TextEncoder();
+          ws.send(encoder.encode(data));
+        }
+      });
+
+      resizeObserver = new ResizeObserver(() => {
+        fitAddon.fit();
+        const dims = fitAddon.proposeDimensions();
+        if (dims && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'resize', cols: dims.cols, rows: dims.rows }));
+        }
+      });
+      resizeObserver.observe(termRef.current!);
+    }
+
+    init();
 
     return () => {
-      resizeObserver.disconnect();
-      ws.close();
-      terminal.dispose();
+      cancelled = true;
+      resizeObserver?.disconnect();
+      ws?.close();
+      terminal?.dispose();
     };
   }, [agentId]);
 
