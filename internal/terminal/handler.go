@@ -44,17 +44,31 @@ func (h *Handler) ServeWebSocket(w http.ResponseWriter, r *http.Request, tmuxSes
 
 	var cmd *exec.Cmd
 	if tmuxSession != "" {
+		socketPath := os.Getenv("AWAYTEAM_TMUX_SOCKET")
+		if socketPath != "" {
+			// Configure tmux for dashboard terminal before attaching.
+			for _, opt := range [][]string{
+				{"mouse", "on"},
+				{"default-terminal", "xterm-256color"},
+				{"allow-passthrough", "on"},
+			} {
+				exec.Command("tmux", "-S", socketPath, "set-option", "-g", opt[0], opt[1]).Run()
+			}
+		}
+
 		args := []string{"attach-session", "-t", tmuxSession}
-		if socketPath := os.Getenv("AWAYTEAM_TMUX_SOCKET"); socketPath != "" {
+		if socketPath != "" {
 			args = append([]string{"-S", socketPath}, args...)
 		}
 		cmd = exec.Command("tmux", args...)
+		cmd.Env = append(os.Environ(), "TERM=xterm-256color")
 	} else {
 		shell := os.Getenv("SHELL")
 		if shell == "" {
 			shell = "/bin/bash"
 		}
 		cmd = exec.Command(shell)
+		cmd.Env = append(os.Environ(), "TERM=xterm-256color")
 	}
 
 	ptmx, err := pty.Start(cmd)

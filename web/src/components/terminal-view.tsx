@@ -30,17 +30,19 @@ export function TerminalView({ agentId, tmuxSession }: TerminalViewProps) {
         { Terminal },
         { FitAddon },
         { WebLinksAddon },
+        { Unicode11Addon },
       ] = await Promise.all([
         import('@xterm/xterm'),
         import('@xterm/addon-fit'),
         import('@xterm/addon-web-links'),
+        import('@xterm/addon-unicode11'),
       ]);
       if (cancelled || !termRef.current) return;
 
       terminal = new Terminal({
         cursorBlink: true,
         fontSize: 14,
-        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+        fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Symbols Nerd Font', 'Noto Color Emoji', 'Apple Color Emoji', 'Segoe UI Emoji', monospace",
         scrollback: 10000,
         theme: {
           background: '#0d1117',
@@ -53,8 +55,11 @@ export function TerminalView({ agentId, tmuxSession }: TerminalViewProps) {
 
       const fitAddon = new FitAddon();
       const webLinksAddon = new WebLinksAddon();
+      const unicode11Addon = new Unicode11Addon();
       terminal.loadAddon(fitAddon);
       terminal.loadAddon(webLinksAddon);
+      terminal.loadAddon(unicode11Addon);
+      terminal.unicode.activeVersion = '11';
       terminal.open(termRef.current);
       fitAddon.fit();
 
