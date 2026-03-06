@@ -55,7 +55,11 @@ function EventBubble({ event }: { event: DashboardEvent }) {
     : 'bg-gray-800 border-gray-700';
 
   const data = event.data as Record<string, unknown> | undefined;
-  const content = (data?.content as string) ?? JSON.stringify(data ?? {});
+  const content = (data?.content as string)
+    ?? (data?.prompt as string)
+    ?? (data?.message as string)
+    ?? (data?.text as string);
+  const display = content || JSON.stringify(data ?? {});
 
   return (
     <div className={`rounded-lg border ${bubbleClass} p-3 my-2`}>
@@ -65,7 +69,7 @@ function EventBubble({ event }: { event: DashboardEvent }) {
         </span>
         <span className="text-xs text-gray-500">{formatTime(event.timestamp)}</span>
       </div>
-      <div className="text-sm text-gray-200 whitespace-pre-wrap">{content}</div>
+      <div className="text-sm text-gray-200 whitespace-pre-wrap">{display}</div>
     </div>
   );
 }

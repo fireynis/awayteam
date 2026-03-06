@@ -164,6 +164,7 @@ func cmdInstall(args []string) {
 		"PostToolUse":      awayteamPath + " hook post-tool-use",
 		"Notification":     awayteamPath + " hook notification",
 		"UserPromptSubmit": awayteamPath + " hook user-prompt-submit",
+		"Stop":             awayteamPath + " hook stop",
 	}
 
 	settingsPath := settingsFilePath()
