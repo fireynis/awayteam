@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -248,8 +249,15 @@ func writeJSONFile(path string, data map[string]any) error {
 	return os.WriteFile(path, out, 0644)
 }
 
-// hookListContainsCommand checks if a hook list already contains a specific command.
+// hookListContainsCommand checks if a hook list already contains a command
+// matching the given one. Uses suffix matching on " hook <type>" so detection
+// works even when the binary path changes between installs.
 func hookListContainsCommand(hookList any, command string) bool {
+	suffix := command
+	if idx := strings.LastIndex(command, " hook "); idx >= 0 {
+		suffix = command[idx:]
+	}
+
 	list, ok := hookList.([]any)
 	if !ok {
 		return false
@@ -268,7 +276,7 @@ func hookListContainsCommand(hookList any, command string) bool {
 			if !ok {
 				continue
 			}
-			if cmd, _ := hMap["command"].(string); cmd == command {
+			if cmd, _ := hMap["command"].(string); strings.HasSuffix(cmd, suffix) {
 				return true
 			}
 		}
