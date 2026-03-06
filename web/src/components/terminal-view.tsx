@@ -41,6 +41,7 @@ export function TerminalView({ agentId, tmuxSession }: TerminalViewProps) {
         cursorBlink: true,
         fontSize: 14,
         fontFamily: "'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace",
+        scrollback: 10000,
         theme: {
           background: '#0d1117',
           foreground: '#c9d1d9',

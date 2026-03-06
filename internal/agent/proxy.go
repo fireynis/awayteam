@@ -261,6 +261,11 @@ func startTmuxSession(name string, cmd string, args []string, env []string) (str
 		}
 		return "", fmt.Errorf("tmux new-session: %w", err)
 	}
+	// Enable mouse mode (scroll = scrollback, not arrow keys) and increase history.
+	// Safe to set globally — we use a dedicated socket, won't affect user's tmux.
+	exec.Command("tmux", "-S", socketPath, "set-option", "-g", "mouse", "on").Run()
+	exec.Command("tmux", "-S", socketPath, "set-option", "-g", "history-limit", "50000").Run()
+
 	// Set env var so terminal handler can find the socket
 	os.Setenv("AWAYTEAM_TMUX_SOCKET", socketPath)
 	return name, nil
