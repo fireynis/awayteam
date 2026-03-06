@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Suspense, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useAgentStore, EMPTY_EVENTS } from '@/store/agents';
 import { ConversationView } from '@/components/conversation-view';
 import { ResponseInput } from '@/components/response-input';
@@ -17,6 +17,15 @@ function AgentPageContent() {
   const agent = useAgentStore((s) => s.agents.get(agentId));
   const events = useAgentStore((s) => s.agentEvents.get(agentId)) ?? EMPTY_EVENTS;
   const connectionInfo = useAgentStore((s) => s.agentConnectionInfo.get(agentId));
+  const loadAgentEvents = useAgentStore((s) => s.loadAgentEvents);
+
+  useEffect(() => {
+    if (!agentId) return;
+    fetch(`/api/v1/agents/${agentId}/events?limit=500`)
+      .then((res) => res.ok ? res.json() : [])
+      .then((data) => { if (Array.isArray(data) && data.length > 0) loadAgentEvents(agentId, data); })
+      .catch(() => {});
+  }, [agentId, loadAgentEvents]);
 
   if (!agentId) {
     return (

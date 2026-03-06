@@ -11,6 +11,7 @@ interface AgentStore {
   agentConnectionInfo: Map<string, Record<string, string>>;
   recentEvents: DashboardEvent[];
   setAgents: (agents: AgentState[]) => void;
+  loadAgentEvents: (agentId: string, events: DashboardEvent[]) => void;
   handleEvent: (event: DashboardEvent) => void;
 }
 
@@ -26,6 +27,21 @@ export const useAgentStore = create<AgentStore>((set) => ({
       map.set(a.agent_id, a);
     }
     set({ agents: map });
+  },
+
+  loadAgentEvents: (agentId: string, events: DashboardEvent[]) => {
+    set((state) => {
+      const agentEvents = new Map(state.agentEvents);
+      const agentConnectionInfo = new Map(state.agentConnectionInfo);
+      const filtered = events.filter((e) => e.type !== 'output.stream');
+      agentEvents.set(agentId, filtered.slice(-MAX_EVENTS_PER_AGENT));
+      for (const e of events) {
+        if (e.type === 'session.start' && e.data) {
+          agentConnectionInfo.set(e.agent_id, e.data as Record<string, string>);
+        }
+      }
+      return { agentEvents, agentConnectionInfo };
+    });
   },
 
   handleEvent: (event: DashboardEvent) => {
@@ -49,8 +65,10 @@ export const useAgentStore = create<AgentStore>((set) => ({
 
       if (event.type !== 'output.stream') {
         const existing = agentEvents.get(event.agent_id) ?? [];
-        const updated = [...existing, event].slice(-MAX_EVENTS_PER_AGENT);
-        agentEvents.set(event.agent_id, updated);
+        if (!existing.some((e) => e.id === event.id)) {
+          const updated = [...existing, event].slice(-MAX_EVENTS_PER_AGENT);
+          agentEvents.set(event.agent_id, updated);
+        }
       }
 
       const recentEvents = [event, ...state.recentEvents].slice(0, MAX_RECENT_EVENTS);
