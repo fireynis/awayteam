@@ -83,8 +83,6 @@ export function ConversationView({ events }: ConversationViewProps) {
     (e) =>
       e.type === 'message.user' ||
       e.type === 'message.assistant' ||
-      e.type === 'tool.call' ||
-      e.type === 'tool.result' ||
       e.type === 'question.asked' ||
       e.type === 'question.answered'
   );
