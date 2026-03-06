@@ -44,7 +44,11 @@ func (h *Handler) ServeWebSocket(w http.ResponseWriter, r *http.Request, tmuxSes
 
 	var cmd *exec.Cmd
 	if tmuxSession != "" {
-		cmd = exec.Command("tmux", "attach-session", "-t", tmuxSession)
+		args := []string{"attach-session", "-t", tmuxSession}
+		if socketPath := os.Getenv("AWAYTEAM_TMUX_SOCKET"); socketPath != "" {
+			args = append([]string{"-S", socketPath}, args...)
+		}
+		cmd = exec.Command("tmux", args...)
 	} else {
 		shell := os.Getenv("SHELL")
 		if shell == "" {
