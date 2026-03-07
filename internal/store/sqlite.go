@@ -121,7 +121,8 @@ func (s *SQLiteStore) GetAgents(ctx context.Context) ([]AgentState, error) {
 func (s *SQLiteStore) GetAgentEvents(ctx context.Context, agentID string, limit int) ([]events.Event, error) {
 	rows, err := s.db.QueryContext(ctx,
 		`SELECT id, type, timestamp, agent_id, agent_type, agent_name, data_json, status
-		 FROM events WHERE agent_id = ? ORDER BY timestamp ASC LIMIT ?`,
+		 FROM (SELECT * FROM events WHERE agent_id = ? ORDER BY timestamp DESC LIMIT ?)
+		 ORDER BY timestamp ASC`,
 		agentID, limit)
 	if err != nil {
 		return nil, err
